@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Voting DApp (lite)</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.7.0/dist/web3.min.js"></script>
+</head>
+<body>
+  <h1>Voting DApp</h1>
+  <button id="connect">Connect wallet</button>
+  <br><br>
+  <button id="create">Create sample poll</button>
+  <br><br>
+  <button id="vote">Vote option 0</button>
+  <p id="out"></p>
+
+<script>
+const ABI = []; // TODO paste ABI
+const ADDR = "0x..."; // TODO replace
+let web3, account, ctr;
+
+async function out(t){document.getElementById('out').innerText=t;}
+
+document.getElementById('connect').onclick = async ()=>{
+  await window.ethereum.request({method:'eth_requestAccounts'});
+  web3 = new Web3(window.ethereum);
+  [account]= await web3.eth.getAccounts();
+  ctr = new web3.eth.Contract(ABI, ADDR);
+  out("Connected: "+account);
+};
+
+document.getElementById('create').onclick = async ()=>{
+  await ctr.methods.createPoll("Tea?",["Yes","No"],3600).send({from:account});
+  out("Poll created!");
+};
+
+document.getElementById('vote').onclick = async ()=>{
+  await ctr.methods.vote(0,0).send({from:account});
+  out("Voted!");
+};
+</script>
+</body>
+</html>
