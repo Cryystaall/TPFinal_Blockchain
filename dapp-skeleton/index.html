@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Voting DApp (lite)</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.7.0/dist/web3.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    button {
+      padding: 8px 15px;
+      margin: 5px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    input, select {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #dff0d8;
+      color: #3c763d;
+    }
+    .error {
+      background-color: #f2dede;
+      color: #a94442;
+    }
+    .info {
+      background-color: #d9edf7;
+      color: #31708f;
+    }
+    .poll-option {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+    }
+    .poll-option-bar {
+      height: 20px;
+      background-color: #4CAF50;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Voting DApp</h1>
+
+  <div class="container">
+    <h2>Connection</h2>
+    <button id="connect">Connect wallet</button>
+    <div id="connection-status"></div>
+  </div>
+
+  <div class="container">
+    <h2>Create Poll</h2>
+    <div>
+      <label for="poll-question">Question:</label>
+      <input type="text" id="poll-question" placeholder="Enter your question" value="Tea?">
+    </div>
+    <div id="options-container">
+      <div>
+        <label for="option1">Option 1:</label>
+        <input type="text" id="option1" placeholder="Option 1" value="Yes">
+      </div>
+      <div>
+        <label for="option2">Option 2:</label>
+        <input type="text" id="option2" placeholder="Option 2" value="No">
+      </div>
+    </div>
+    <button id="add-option">Add Option</button>
+    <div>
+      <label for="duration">Duration (seconds):</label>
+      <input type="number" id="duration" value="3600">
+    </div>
+    <button id="create">Create Poll</button>
+    <div id="create-status"></div>
+  </div>
+
+  <div class="container">
+    <h2>Vote</h2>
+    <div>
+      <label for="poll-id">Poll ID:</label>
+      <input type="number" id="poll-id" value="0">
+      <button id="load-poll">Load Poll</button>
+    </div>
+    <div id="poll-details"></div>
+    <div id="vote-options"></div>
+    <div id="vote-status"></div>
+  </div>
+
+  <div class="container">
+    <h2>Results</h2>
+    <div id="results"></div>
+  </div>
+
+<script>
+const ABI = [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "pollId",
+          "type": "uint256"
+        }
+      ],
+      "name": "PollCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "pollId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "voter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "option",
+          "type": "uint256"
+        }
+      ],
+      "name": "Voted",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "q",
+          "type": "string"
+        },
+        {
+          "internalType": "string[]",
+          "name": "opts",
+          "type": "string[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "dur",
+          "type": "uint256"
+        }
+      ],
+      "name": "createPoll",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        }
+      ],
+      "name": "getResults",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pollCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "polls",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "question",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "deadline",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "opt",
+          "type": "uint256"
+        }
+      ],
+      "name": "vote",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "voted",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ];
+const ADDR = "0x0648A10241ECdA0102BbA21B0e1Fdd97c679AA18"; 
+let web3, account, ctr;
+let currentPollId = 0;
+let currentPollOptions = [];
+
+// Helper functions
+function showStatus(elementId, message, type) {
+  const statusElement = document.getElementById(elementId);
+  statusElement.innerHTML = `<div class="status ${type}">${message}</div>`;
+}
+
+function clearStatus(elementId) {
+  document.getElementById(elementId).innerHTML = '';
+}
+
+async function loadPollDetails(pollId) {
+  try {
+    // Get poll details
+    const poll = await ctr.methods.polls(pollId).call();
+
+    // Get poll options (this requires additional calls to get options array)
+    const results = await ctr.methods.getResults(pollId).call();
+
+    // Display poll details
+    const pollDetailsElement = document.getElementById('poll-details');
+    const deadline = new Date(poll.deadline * 1000);
+    const now = new Date();
+    const isActive = deadline > now;
+
+    pollDetailsElement.innerHTML = `
+      <h3>${poll.question}</h3>
+      <p>Deadline: ${deadline.toLocaleString()}</p>
+      <p>Status: ${isActive ? '<span style="color:green">Active</span>' : '<span style="color:red">Closed</span>'}</p>
+      <p>Owner: ${poll.owner}</p>
+    `;
+
+    // Create voting options
+    const voteOptionsElement = document.getElementById('vote-options');
+    voteOptionsElement.innerHTML = '';
+
+    if (isActive) {
+      // Check if user has already voted
+      const hasVoted = await ctr.methods.voted(pollId, account).call();
+
+      if (hasVoted) {
+        voteOptionsElement.innerHTML = '<p>You have already voted on this poll.</p>';
+      } else {
+        // Create voting buttons
+        const optionsContainer = document.createElement('div');
+
+        // We need to get the options from the contract
+        // For simplicity, we'll just create numbered options based on results length
+        currentPollOptions = [];
+        for (let i = 0; i < results.length; i++) {
+          currentPollOptions.push(`Option ${i+1}`);
+
+          const button = document.createElement('button');
+          button.innerText = `Vote for Option ${i+1}`;
+          button.onclick = () => vote(pollId, i);
+          optionsContainer.appendChild(button);
+        }
+
+        voteOptionsElement.appendChild(optionsContainer);
+      }
+    } else {
+      voteOptionsElement.innerHTML = '<p>This poll is closed.</p>';
+    }
+
+    // Display results
+    displayResults(pollId, results);
+
+    return true;
+  } catch (error) {
+    showStatus('poll-details', `Error loading poll: ${error.message}`, 'error');
+    return false;
+  }
+}
+
+function displayResults(pollId, results) {
+  const resultsElement = document.getElementById('results');
+  resultsElement.innerHTML = `<h3>Results for Poll ${pollId}</h3>`;
+
+  // Calculate total votes for percentage
+  const totalVotes = results.reduce((sum, votes) => sum + parseInt(votes), 0);
+
+  // Create result bars
+  const resultsContainer = document.createElement('div');
+  for (let i = 0; i < results.length; i++) {
+    const votes = parseInt(results[i]);
+    const percentage = totalVotes > 0 ? (votes / totalVotes) * 100 : 0;
+
+    const optionDiv = document.createElement('div');
+    optionDiv.className = 'poll-option';
+    optionDiv.innerHTML = `
+      <span>Option ${i+1}: ${votes} votes (${percentage.toFixed(1)}%)</span>
+      <div class="poll-option-bar" style="width: ${percentage}%"></div>
+    `;
+
+    resultsContainer.appendChild(optionDiv);
+  }
+
+  resultsElement.appendChild(resultsContainer);
+}
+
+// Event handlers
+document.getElementById('connect').onclick = async () => {
+  try {
+    if (!window.ethereum) {
+      showStatus('connection-status', 'MetaMask not detected. Please install MetaMask.', 'error');
+      return;
+    }
+
+    await window.ethereum.request({method: 'eth_requestAccounts'});
+    web3 = new Web3(window.ethereum);
+    [account] = await web3.eth.getAccounts();
+    ctr = new web3.eth.Contract(ABI, ADDR);
+
+    showStatus('connection-status', `Connected: ${account}`, 'success');
+
+    // Enable other sections after connection
+    document.getElementById('create').disabled = false;
+    document.getElementById('load-poll').disabled = false;
+
+    // Load poll count
+    const pollCount = await ctr.methods.pollCount().call();
+    if (pollCount > 0) {
+      document.getElementById('poll-id').max = pollCount - 1;
+      loadPollDetails(0);
+    }
+  } catch (error) {
+    showStatus('connection-status', `Connection error: ${error.message}`, 'error');
+  }
+};
+
+document.getElementById('add-option').onclick = () => {
+  const optionsContainer = document.getElementById('options-container');
+  const optionCount = optionsContainer.children.length + 1;
+
+  const optionDiv = document.createElement('div');
+  optionDiv.innerHTML = `
+    <label for="option${optionCount}">Option ${optionCount}:</label>
+    <input type="text" id="option${optionCount}" placeholder="Option ${optionCount}">
+  `;
+
+  optionsContainer.appendChild(optionDiv);
+};
+
+document.getElementById('create').onclick = async () => {
+  try {
+    clearStatus('create-status');
+
+    // Get form values
+    const question = document.getElementById('poll-question').value;
+    if (!question) {
+      showStatus('create-status', 'Please enter a question', 'error');
+      return;
+    }
+
+    // Get options
+    const options = [];
+    const optionsContainer = document.getElementById('options-container');
+    for (let i = 1; i <= optionsContainer.children.length; i++) {
+      const optionValue = document.getElementById(`option${i}`).value;
+      if (optionValue) {
+        options.push(optionValue);
+      }
+    }
+
+    if (options.length < 2) {
+      showStatus('create-status', 'Please enter at least 2 options', 'error');
+      return;
+    }
+
+    const duration = parseInt(document.getElementById('duration').value);
+    if (isNaN(duration) || duration <= 0) {
+      showStatus('create-status', 'Please enter a valid duration', 'error');
+      return;
+    }
+
+    // Create poll
+    showStatus('create-status', 'Creating poll...', 'info');
+
+    const tx = ctr.methods.createPoll(question, options, duration).send({from: account});
+
+    // Transaction status updates
+    tx.on('transactionHash', (hash) => {
+      showStatus('create-status', `Transaction sent: ${hash}`, 'info');
+    });
+
+    tx.on('receipt', (receipt) => {
+      showStatus('create-status', `Poll created successfully! Poll ID: ${receipt.events.PollCreated.returnValues.pollId}`, 'success');
+
+      // Update poll count and load the new poll
+      ctr.methods.pollCount().call().then(count => {
+        const newPollId = count - 1;
+        document.getElementById('poll-id').value = newPollId;
+        loadPollDetails(newPollId);
+      });
+    });
+
+    tx.on('error', (error) => {
+      showStatus('create-status', `Error creating poll: ${error.message}`, 'error');
+    });
+  } catch (error) {
+    showStatus('create-status', `Error creating poll: ${error.message}`, 'error');
+  }
+};
+
+document.getElementById('load-poll').onclick = async () => {
+  const pollId = parseInt(document.getElementById('poll-id').value);
+  currentPollId = pollId;
+  await loadPollDetails(pollId);
+};
+
+async function vote(pollId, optionIndex) {
+  try {
+    clearStatus('vote-status');
+    showStatus('vote-status', 'Submitting vote...', 'info');
+
+    const tx = ctr.methods.vote(pollId, optionIndex).send({from: account});
+
+    // Transaction status updates
+    tx.on('transactionHash', (hash) => {
+      showStatus('vote-status', `Transaction sent: ${hash}`, 'info');
+    });
+
+    tx.on('receipt', (receipt) => {
+      showStatus('vote-status', 'Vote submitted successfully!', 'success');
+
+      // Reload poll details to update results
+      loadPollDetails(pollId);
+    });
+
+    tx.on('error', (error) => {
+      showStatus('vote-status', `Error voting: ${error.message}`, 'error');
+    });
+  } catch (error) {
+    showStatus('vote-status', `Error voting: ${error.message}`, 'error');
+  }
+}
+</script>
+</body>
+</html>
