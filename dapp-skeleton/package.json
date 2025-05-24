@@ -1,16 +1,19 @@
 {
     "name": "hardhat-project",
     "version": "1.0.0",
-    "description": "Projet Hardhat minimal",
+    "description": "Projet Hardhat minimal avec serveur local",
     "scripts": {
       "compile": "npx hardhat compile",
-      "test": "npx hardhat test"
+      "test": "npx hardhat test",
+      "start": "live-server"
     },
     "devDependencies": {
-      "hardhat": "^2.21.0",
-      "ethers": "^6.6.0",
+      "@nomicfoundation/hardhat-toolbox": "^5.0.0",
       "chai": "^4.3.7",
-      "dotenv": "^16.3.1"
+      "dotenv": "^16.3.1",
+      "ethers": "^6.6.0",
+      "hardhat": "^2.24.0",
+      "live-server": "^1.2.2"
     }
   }
   

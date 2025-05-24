@@ -1,0 +1,12 @@
+# Node modules
+node_modules/
+
+# Hardhat output
+artifacts/
+cache/
+
+# Env files
+.env
+
+# MacOs core
+.DS_Store

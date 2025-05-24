@@ -23,20 +23,38 @@ contract Voting {
     /// @param opts array of options (min 2)
     /// @param dur duration in seconds
     function createPoll(string calldata q, string[] calldata opts, uint dur) external {
-        require(opts.length >= 2, "min 2 options");
+    require(opts.length >= 2, "min 2 options");
 
-        // TODO: initialise struct and store in mapping
-        // polls[pollCount] = ...
-        // emit PollCreated(pollCount);
-        // pollCount++;
+    Poll storage p = polls[pollCount];
+    p.question = q;
+    p.deadline = block.timestamp + dur;
+    p.owner = msg.sender;
+
+    // Copier les options élément par élément
+    for (uint i = 0; i < opts.length; i++) {
+        p.options.push(opts[i]);
+        p.votes.push(0);
     }
+
+    emit PollCreated(pollCount);
+    pollCount++;
+}
+
 
     /// @notice vote on a poll
     /// @param id poll id
     /// @param opt index of option
     function vote(uint id, uint opt) external {
-        // TODO: implement guards (deadline, double-vote, option bounds)
-        // TODO: record vote & emit event
+        Poll storage p = polls[id];
+
+        require(block.timestamp <= polls[id].deadline, "Voting ended");
+        require(!voted[id][msg.sender], "Already voted");
+        require(opt < p.options.length, "invalid option");
+
+        p.votes[opt]++;
+        voted[id][msg.sender] = true;
+
+        emit Voted(id, msg.sender, opt);
     }
 
     /// @notice view results
