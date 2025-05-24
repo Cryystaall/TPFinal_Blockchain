@@ -23,6 +23,6 @@ npm install
 npx hardhat test
 live-server
 
-## Deployed at
+## Deployed at 
 https://astounding-paletas-5d6f37.netlify.app/
 
