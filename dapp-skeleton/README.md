@@ -20,7 +20,11 @@ Voting deployed at: 0x0648A10241ECdA0102BbA21B0e1Fdd97c679AA18
 git clone https://github.com/votreUser/votreRepo.git
 cd dapp-skeleton
 npm install
+
+## Tests
 npx hardhat test
+
+## Lancer l'application
 live-server
 
 ## Deployed at 
